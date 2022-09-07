@@ -1,6 +1,6 @@
 #define MAX_SYLLABLE 4
-#define LEN_OVERFLOW 8
-#define LEN_UNDRFLOW 4
+#define LEN_OVERFLOW 7
+#define LEN_UNDRFLOW 3
 
 #define FINAL_DIFF .75f
 
@@ -137,21 +137,83 @@ static const u32 vowel_len[] = {
 };
 #undef ENTRY
 
-#define RAND_CODA() (randu32(1, CONS_COUNT_CODA))
+#define ENTRY(_, ...) CONS_ ## _ ,
+#define LUT_N_CONS_CODA (sizeof(lut_consonant_coda) / sizeof(enum consonant))
+static const enum consonant lut_consonant_coda[] = {
+	CONSONANTS_CODA
+	PASTE_8 (ENTRY(BH, 0))
+	PASTE_64(ENTRY(D,  0))
+	PASTE_64(ENTRY(L,  0))
+	PASTE_64(ENTRY(M,  0))
+	PASTE_32(ENTRY(N,  0))
+	PASTE_32(ENTRY(R,  0))
+	PASTE_16(ENTRY(S,  0))
+	PASTE_16(ENTRY(T,  0))
+	PASTE_8 (ENTRY(TH, 0))
+};
+#define LUT_N_CONS_ELSE (sizeof(lut_consonant_else) / sizeof(enum consonant))
+static const enum consonant lut_consonant_else[] = {
+	CONSONANTS
+	PASTE_64(ENTRY(B,  0))
+	PASTE_64(ENTRY(C,  0))
+	PASTE_8 (ENTRY(CL, 0))
+	PASTE_8 (ENTRY(CH, 0))
+	PASTE_8 (ENTRY(DD, 0))
+	PASTE_8 (ENTRY(G,  0))
+	PASTE_32(ENTRY(F,  0))
+	PASTE_8 (ENTRY(H,  0))
+	PASTE_8 (ENTRY(RH, 0))
+};
+#undef ENTRY
+
+#define ENTRY(_, ...) VOWEL_ ## _ ,
+#define LUT_N_VOWEL_BROAD (sizeof(lut_vowel_broad) / sizeof(enum vowel))
+static const enum vowel lut_vowel_broad[] = {
+	VOWELS_BROAD
+	VOWELS_BROAD_SLENDER
+	PASTE_64(ENTRY(A,  0))
+	PASTE_16(ENTRY(O,  0))
+	PASTE_8 (ENTRY(AI, 0))
+};
+#define LUT_N_VOWEL_SLENDER (sizeof(lut_vowel_slender) / sizeof(enum vowel))
+static const enum vowel lut_vowel_slender[] = {
+	VOWELS_SLENDER
+	VOWELS_SLENDER_BROAD
+	PASTE_32(ENTRY(E,  0))
+	PASTE_16(ENTRY(I,  0))
+	PASTE_8 (ENTRY(Y,  0))
+	PASTE_8 (ENTRY(EA, 0))
+	PASTE_8 (ENTRY(IA, 0))
+};
+#undef ENTRY
 
 static enum consonant rand_cons()
 {
-	enum consonant result = randu32(1, CONS_LAST - 1);
-	return result >= CONS_COUNT_CODA ? result + 1 : result;
+	const u32 i = randu32(0, LUT_N_CONS_CODA + LUT_N_CONS_ELSE);
+	return i < LUT_N_CONS_CODA ?
+		lut_consonant_coda[i] : lut_consonant_else[i - LUT_N_CONS_CODA];
 }
 
-#define RAND_BROAD()   (randu32(1, VOWEL_COUNT_BROAD))
-#define RAND_SLENDER() (randu32(VOWEL_COUNT_BROAD + 1, VOWEL_LAST))
+static enum consonant rand_cons_coda()
+{
+	return lut_consonant_coda[randu32(0, LUT_N_CONS_CODA)];
+}
+
+static enum vowel rand_vowel_broad()
+{
+	return lut_vowel_broad[randu32(0, LUT_N_VOWEL_BROAD)];
+}
+
+static enum vowel rand_vowel_slender()
+{
+	return lut_vowel_slender[randu32(0, LUT_N_VOWEL_SLENDER)];
+}
 
 static enum vowel rand_vowel()
 {
-	enum vowel result = randu32(1, VOWEL_LAST - 1);
-	return result >= VOWEL_COUNT_BROAD ? result + 1 : result;
+	const u32 i = randu32(0, LUT_N_VOWEL_BROAD + LUT_N_VOWEL_SLENDER);
+	return i < LUT_N_VOWEL_BROAD ?
+		lut_vowel_broad[i] : lut_vowel_slender[i - LUT_N_VOWEL_BROAD];
 }
 
 static int cons_valid(const constraint constr, const enum consonant cons)
@@ -226,9 +288,15 @@ static int cons_valid(const constraint constr, const enum consonant cons)
 	case CONS_M:
 		return constr.type != CONSTR_NONE;
 	case CONS_H:
+	case CONS_RH:
 	case CONS_S:
 	case CONS_STR:
 		return constr.type != CONSTR_FINAL;
+	case CONS_B:
+	case CONS_C:
+	case CONS_F:
+		return constr.type != CONSTR_INITIAL ?
+			randb() : 1;
 	default:
 		return 1;
 	}
@@ -238,7 +306,12 @@ static syllable gen_syllable(const constraint constr)
 {
 	syllable result = { 0 };
 
-	const int has_cons = (constr.type == CONSTR_INITIAL) ?
+	// Too conservative, but useful
+	if (constr.type == CONSTR_FINAL && constr.prev.cons)
+		return result;
+
+	// Somewhat conservative
+	const int has_cons = (constr.type == CONSTR_INITIAL && constr.len > 1) ?
 		randf() > .5f : 1;
 	if (has_cons) {
 		do {
@@ -248,7 +321,7 @@ static syllable gen_syllable(const constraint constr)
 
 	if (constr.type != CONSTR_FINAL) {
 		if (randf() > FINAL_DIFF)
-			result.coda = RAND_CODA();
+			result.coda = rand_cons_coda();
 	}
 
 	assert(result.onset != CONS_COUNT_CODA);
@@ -278,10 +351,10 @@ static syllable gen_syllable(const constraint constr)
 		case CONSTR_NONE:
 			switch (constr.prev.class) {
 			case PREV_BROAD:
-				result.vowel = RAND_BROAD();
+				result.vowel = rand_vowel_broad();
 				break;
 			case PREV_SLENDER:
-				result.vowel = RAND_SLENDER();
+				result.vowel = rand_vowel_slender();
 				break;
 			default:
 				panic();
@@ -319,7 +392,8 @@ static istr syllables_render(const syllable *in, const u32 n)
 	for (u32 i = 0; i < n; ++i) {
 		const syllable *s = in + i;
 
-		assert(s->onset | s->vowel | s->coda);
+		if (!(s->onset | s->vowel | s->coda))
+			break;
 		if (s->onset && s->coda)
 			assert(s->vowel);
 
@@ -347,6 +421,7 @@ static istr syllables_render(const syllable *in, const u32 n)
 	return intern_str(swap);
 }
 
+#ifdef GEN_TRACE
 static void syllables_trace(const syllable *in, const u32 n)
 {
 	for (u32 i = 0; i < n; ++i) {
@@ -357,9 +432,12 @@ static void syllables_trace(const syllable *in, const u32 n)
 			printf("<%s>", vowels[s->vowel]);
 		if (s->coda)
 			printf("<%s>", consonants[s->coda]);
+		if (!(s->onset | s->vowel | s->coda))
+			printf("<...>");
 		printf(" ");
 	}
 }
+#endif
 
 istr gen_name()
 {
@@ -391,6 +469,10 @@ istr gen_name()
 	if (strlen(result) > LEN_OVERFLOW)
 		return gen_name();
 	if (strlen(result) < LEN_UNDRFLOW)
+		return gen_name();
+	if (strlen(result) == LEN_OVERFLOW && randb())
+		return gen_name();
+	if (strlen(result) == LEN_UNDRFLOW && randb())
 		return gen_name();
 
 #ifdef GEN_TRACE

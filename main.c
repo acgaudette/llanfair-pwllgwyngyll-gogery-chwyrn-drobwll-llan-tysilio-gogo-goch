@@ -9,6 +9,7 @@
 #include "acg/istr.h"
 #include "acg/ds.h"
 #include "acg/rand.h"
+#include "acg/rule10.h"
 
 #include "namegen.h"
 
