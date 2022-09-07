@@ -24,14 +24,14 @@ static int exists(const istr name)
 	return 0;
 }
 
-int main()
+int main(int argc, char **argv)
 {
 	init_interns();
 	srand(time(0));
 
-	printf(". begin\n");
+	const u32 n = MAX(1, MIN(64, argc > 1 ? atoi(argv[1]) : 8));
 
-	for (u32 i = 0; i < 8; ++i) {
+	for (u32 i = 0; i < n; ++i) {
 		istr name = NULL;
 		do {
 			name = gen_name();
@@ -40,6 +40,5 @@ int main()
 		*VBUF_PUSH(names) = name;
 	}
 
-	printf(". end\n");
 	exit(0);
 }

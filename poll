@@ -1,1 +1,1 @@
-dowatch 'clear && make -j4 && ./test_ng' *.c *.h Makefile
+dowatch 'clear && make -j4 && ./test_ng 16' *.c *.h Makefile
