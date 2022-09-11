@@ -13,3 +13,15 @@ example output:
 	CLID
 	BALRAD
 	EOTHAR
+
+llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch
+is a single header library and depends on the following
+headers from acgaudette/acg (see main.c for
+implementation):
+
+	acg/sys.h
+	acg/types.h
+	acg/istr.h
+	acg/ds.h
+	acg/rand.h
+	acg/rule10.h

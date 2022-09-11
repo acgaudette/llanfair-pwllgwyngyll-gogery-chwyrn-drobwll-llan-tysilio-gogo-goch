@@ -1,8 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <math.h>
 
-#include "alg/alg.h"
+#define ACG_RAND_NO_ALG
 
 #include "acg/sys.h"
 #include "acg/types.h"
