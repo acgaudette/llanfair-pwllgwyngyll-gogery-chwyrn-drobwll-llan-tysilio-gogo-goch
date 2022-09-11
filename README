@@ -1,0 +1,15 @@
+llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch
+generates celtic sounding strings by constraining syllable
+sequences vaguely conformant to scottish gaelic (and to a
+lesser extent, welsh) orthography.
+
+example output:
+
+	CAILYD
+	DAL
+	EDELBED
+	NAOI
+	LAIR
+	CLID
+	BALRAD
+	EOTHAR
